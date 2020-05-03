@@ -1,4 +1,4 @@
-package com.application.HealthCheckReport.model;
+package com.linecorp.sample.login.application.model;
 
 public class HealthCheckResult {
     private final int nocheckedSite;

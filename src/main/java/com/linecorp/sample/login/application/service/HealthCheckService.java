@@ -1,7 +1,8 @@
-package com.application.HealthCheckReport.service;
+package com.linecorp.sample.login.application.service;
 
-import com.application.HealthCheckReport.model.HealthCheckResult;
-import com.application.HealthCheckReport.util.HTTPClientUtil;
+
+import com.linecorp.sample.login.application.model.HealthCheckResult;
+import com.linecorp.sample.login.application.util.HTTPClientUtil;
 
 import java.util.ArrayList;
 

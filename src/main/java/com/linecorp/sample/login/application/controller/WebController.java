@@ -16,12 +16,21 @@
 package com.linecorp.sample.login.application.controller;
 
 import javax.servlet.http.HttpSession;
+import java.io.IOException;
+import java.util.ArrayList;
 import java.util.Arrays;
 
+import com.linecorp.sample.login.application.model.HealthCheckResult;
+import com.linecorp.sample.login.application.service.HealthCheckService;
+import com.linecorp.sample.login.application.service.SendReportService;
+import com.linecorp.sample.login.application.util.CSVReaderUtil;
+import com.linecorp.sample.login.application.util.TimeUtil;
 import org.apache.log4j.Logger;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 
@@ -29,6 +38,7 @@ import com.linecorp.sample.login.infra.line.api.v2.LineAPIService;
 import com.linecorp.sample.login.infra.line.api.v2.response.AccessToken;
 import com.linecorp.sample.login.infra.line.api.v2.response.IdToken;
 import com.linecorp.sample.login.infra.utils.CommonUtils;
+import org.springframework.web.multipart.MultipartFile;
 
 /**
  * <p>user web application pages</p>
@@ -108,35 +118,35 @@ public class WebController {
             logger.debug("id_token : " + token.id_token);
         }
         httpSession.setAttribute(ACCESS_TOKEN, token);
-        return "redirect:/success";
+        return "redirect:/upload";
     }
 
-    /**
-    * <p>login success Page
-    */
-    @RequestMapping("/success")
-    public String success(HttpSession httpSession, Model model) {
-
-        AccessToken token = (AccessToken)httpSession.getAttribute(ACCESS_TOKEN);
-        if (token == null){
-            return "redirect:/";
-        }
-
-        if (!lineAPIService.verifyIdToken(token.id_token, (String) httpSession.getAttribute(NONCE))) {
-            // verify failed
-            return "redirect:/";
-        }
-
-        httpSession.removeAttribute(NONCE);
-        IdToken idToken = lineAPIService.idToken(token.id_token);
-        if (logger.isDebugEnabled()) {
-            logger.debug("userId : " + idToken.sub);
-            logger.debug("displayName : " + idToken.name);
-            logger.debug("pictureUrl : " + idToken.picture);
-        }
-        model.addAttribute("idToken", idToken);
-        return "user/success";
-    }
+//    /**
+//    * <p>login success Page
+//    */
+//    @RequestMapping("/success")
+//    public String success(HttpSession httpSession, Model model) {
+//
+//        AccessToken token = (AccessToken)httpSession.getAttribute(ACCESS_TOKEN);
+//        if (token == null){
+//            return "redirect:/";
+//        }
+//
+//        if (!lineAPIService.verifyIdToken(token.id_token, (String) httpSession.getAttribute(NONCE))) {
+//            // verify failed
+//            return "redirect:/";
+//        }
+//
+//        httpSession.removeAttribute(NONCE);
+//        IdToken idToken = lineAPIService.idToken(token.id_token);
+//        if (logger.isDebugEnabled()) {
+//            logger.debug("userId : " + idToken.sub);
+//            logger.debug("displayName : " + idToken.name);
+//            logger.debug("pictureUrl : " + idToken.picture);
+//        }
+//        model.addAttribute("idToken", idToken);
+//        return "user/success";
+//    }
 
     /**
     * <p>login Cancel Page
@@ -152,6 +162,32 @@ public class WebController {
     @RequestMapping("/sessionError")
     public String sessionError() {
         return "user/session_error";
+    }
+
+    @GetMapping("/upload")
+    public String index(HttpSession httpSession) {
+        return "index";
+    }
+
+    @PostMapping("/upload-csv-file")
+    public String uploadCSVFile(HttpSession httpSession, @RequestParam("file") MultipartFile file, Model model) throws IOException {
+        long startTime = System.currentTimeMillis();
+        System.out.println("Perform website checking...");
+        ArrayList<String> urlList = CSVReaderUtil.getDataFromCSVFilePath(file);
+        HealthCheckResult result = HealthCheckService.validateListOfURL(urlList);
+        HealthCheckResult resp = new HealthCheckResult(result.getNocheckedSite(), result.getNosuccessSite(), result.getNofailSite(), (int) TimeUtil.getElapsedTime(startTime));
+
+        AccessToken token = (AccessToken)httpSession.getAttribute(ACCESS_TOKEN);
+        if (token == null){
+            return "redirect:/";
+        }
+
+        if (!lineAPIService.verifyIdToken(token.id_token, (String) httpSession.getAttribute(NONCE))) {
+            // verify failed
+            return "redirect:/";
+        }
+        HealthCheckService.logConsoleResult(resp);
+        return SendReportService.sendReport(token.access_token, resp);
     }
 
 }

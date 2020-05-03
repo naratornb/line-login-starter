@@ -1,4 +1,4 @@
-package com.application.HealthCheckReport.util;
+package com.linecorp.sample.login.application.util;
 
 import org.springframework.web.multipart.MultipartFile;
 

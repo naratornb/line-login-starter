@@ -1,4 +1,4 @@
-package com.application.HealthCheckReport.util;
+package com.linecorp.sample.login.application.util;
 
 public class TimeUtil {
     public static long getElapsedTime(long startTime){

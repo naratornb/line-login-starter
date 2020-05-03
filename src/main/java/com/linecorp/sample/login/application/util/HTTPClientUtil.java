@@ -1,6 +1,8 @@
-package com.application.HealthCheckReport.util;
+package com.linecorp.sample.login.application.util;
 
-import com.application.HealthCheckReport.model.HealthCheckResult;
+
+import com.linecorp.sample.login.application.model.HealthCheckResult;
+import okhttp3.*;
 
 import javax.net.ssl.HttpsURLConnection;
 import java.io.BufferedReader;
@@ -38,51 +40,25 @@ public class HTTPClientUtil {
         }
     }
 
+    public static void postReportWithToken(String token, HealthCheckResult result) throws IOException {
+        OkHttpClient client = new OkHttpClient().newBuilder()
+                .build();
+        MediaType mediaType = MediaType.parse("text/plain");
+        RequestBody body = new MultipartBody.Builder().setType(MultipartBody.FORM)
+                .addFormDataPart("total_website",  toStr(result.getNocheckedSite()))
+                .addFormDataPart("success", toStr(result.getNosuccessSite()))
+                .addFormDataPart("failure", toStr(result.getNofailSite()))
+                .addFormDataPart("total_time", toStr(result.getTotalTime()))
+                .build();
+        Request request = new Request.Builder()
+                .url("https://backend-challenge.line-apps.com/healthcheck/report")
+                .method("POST", body)
+                .addHeader("Authorization", "Bearer " + token)
+                .build();
+        Response response = client.newCall(request).execute();
+    }
 
-    private void sendPost(HealthCheckResult result) throws Exception {
-
-        String url = "https://backend-challenge.line-apps.com/healthcheck/report";
-
-        HttpsURLConnection httpClient = (HttpsURLConnection) new URL(url).openConnection();
-
-        //add request header
-        httpClient.setRequestMethod("POST");
-        httpClient.setRequestProperty("Content-Type", "application/json; utf-8");
-        httpClient.setRequestProperty("Accept", "application/json");
-
-        // Input data here
-        String jsonInputString = " {\"total_websites\": \"" + result.getNocheckedSite() + "\", " +
-                "\"success\": \"" + result.getNosuccessSite() + "\"," +
-                "\"failure\": \"" + result.getNofailSite() + "\"," +
-                "\"total_time\": \"" + result.getTotalTime() + "\", } ";
-
-        // Send post request
-        httpClient.setDoOutput(true);
-        try (OutputStream os = httpClient.getOutputStream()) {
-            byte[] input = jsonInputString.getBytes("utf-8");
-            os.write(input, 0, input.length);
-            os.flush();
-        }
-
-        int responseCode = httpClient.getResponseCode();
-        System.out.println("\nSending 'POST' request to URL : " + url);
-//        System.out.println("Post parameters : " + urlParameters);
-        System.out.println("Response Code : " + responseCode);
-
-        try (BufferedReader in = new BufferedReader(
-                new InputStreamReader(httpClient.getInputStream()))) {
-
-            String line;
-            StringBuilder response = new StringBuilder();
-
-            while ((line = in.readLine()) != null) {
-                response.append(line);
-            }
-
-            //print result
-            System.out.println(response.toString());
-
-        }
-
+    private static String toStr (int i){
+        return Integer.toString(i);
     }
 }
